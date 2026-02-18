@@ -1,7 +1,8 @@
 import { useState, useCallback } from 'react';
 
+import { useWalletConnect } from '@btc-vision/walletconnect';
+
 import { useOP20 } from '../hooks/useContract';
-import { useWallet } from '../hooks/useWallet';
 
 interface TokenData {
     name: string;
@@ -44,7 +45,8 @@ export function TokenExplorer() {
 
     const { getName, getSymbol, getDecimals, getTotalSupply, getBalanceOf } =
         useOP20(activeAddress);
-    const { addressObject, isConnected } = useWallet();
+    const { address: addressObject, walletAddress } = useWalletConnect();
+    const isConnected = walletAddress !== null;
 
     const handleExplore = useCallback(async () => {
         if (!contractAddress.trim()) return;

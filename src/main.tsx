@@ -1,5 +1,6 @@
 import { StrictMode } from 'react';
 import { createRoot } from 'react-dom/client';
+import { WalletConnectProvider } from '@btc-vision/walletconnect';
 
 import App from './App';
 import './styles/global.css';
@@ -11,6 +12,8 @@ if (!rootElement) {
 
 createRoot(rootElement).render(
     <StrictMode>
-        <App />
+        <WalletConnectProvider theme="dark">
+            <App />
+        </WalletConnectProvider>
     </StrictMode>,
 );
