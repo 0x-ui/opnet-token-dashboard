@@ -1,8 +1,7 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useRef } from 'react';
+import { getContract, IOP20Contract, OP_20_ABI } from 'opnet';
 
-import { useWalletConnect } from '@btc-vision/walletconnect';
-
-import { useOP20 } from '../hooks/useContract';
+import { useOPNet } from '../providers/OPNetProvider';
 
 interface TokenData {
     name: string;
@@ -33,121 +32,86 @@ function formatTokenAmount(amount: bigint, decimals: number): string {
 
 /**
  * Token Explorer component.
- * Allows users to input an OP20 token address and view its information.
+ * Fetches OP20 token data directly from the OPNet RPC provider.
+ * No wallet connection required.
  */
 export function TokenExplorer() {
     const [contractAddress, setContractAddress] = useState('');
-    const [activeAddress, setActiveAddress] = useState('');
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
-    const [userBalance, setUserBalance] = useState<bigint | null>(null);
+    const [activeAddress, setActiveAddress] = useState('');
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [isFetching, setIsFetching] = useState(false);
+    const contractRef = useRef<IOP20Contract | null>(null);
 
-    const { getName, getSymbol, getDecimals, getTotalSupply, getBalanceOf } =
-        useOP20(activeAddress);
-    const { address: addressObject, walletAddress } = useWalletConnect();
-    const isConnected = walletAddress !== null;
+    const { provider, network, isConnected: rpcConnected } = useOPNet();
 
-    const handleExplore = useCallback(async () => {
-        if (!contractAddress.trim()) return;
+    const handleExplore = useCallback(
+        async (e: React.FormEvent) => {
+            e.preventDefault();
+            const addr = contractAddress.trim();
+            if (!addr) return;
 
-        setFetchError(null);
-        setTokenData(null);
-        setUserBalance(null);
-        setIsFetching(true);
-        setActiveAddress(contractAddress.trim());
-
-        try {
-            await new Promise((resolve) => setTimeout(resolve, 100));
-        } catch {
-            // timing delay for state propagation
-        }
-
-        setIsFetching(false);
-    }, [contractAddress]);
-
-    const handleFetchData = useCallback(async () => {
-        if (!activeAddress) return;
-
-        setFetchError(null);
-        setIsFetching(true);
-
-        try {
-            const [name, symbol, decimals, totalSupply] = await Promise.all([
-                getName(),
-                getSymbol(),
-                getDecimals(),
-                getTotalSupply(),
-            ]);
-
-            if (name === null || symbol === null || decimals === null || totalSupply === null) {
-                setFetchError(
-                    'Could not fetch token data. Make sure the address is a valid OP20 token.',
-                );
-                setIsFetching(false);
+            if (!provider || !rpcConnected) {
+                setFetchError('Not connected to OPNet RPC. Please wait or try a different network.');
                 return;
             }
 
-            setTokenData({ name, symbol, decimals, totalSupply });
+            setFetchError(null);
+            setTokenData(null);
+            setIsFetching(true);
+            setActiveAddress(addr);
 
-            if (isConnected && addressObject) {
-                const balance = await getBalanceOf(addressObject);
-                setUserBalance(balance);
-            }
-        } catch (err) {
-            const message = err instanceof Error ? err.message : String(err);
-            setFetchError(`Failed to fetch token: ${message}`);
-        } finally {
-            setIsFetching(false);
-        }
-    }, [
-        activeAddress,
-        getName,
-        getSymbol,
-        getDecimals,
-        getTotalSupply,
-        getBalanceOf,
-        isConnected,
-        addressObject,
-    ]);
+            try {
+                const contract = getContract<IOP20Contract>(addr, OP_20_ABI, provider, network);
+                contractRef.current = contract;
 
-    const handleSubmit = useCallback(
-        async (e: React.FormEvent) => {
-            e.preventDefault();
-            await handleExplore();
-            setTimeout(() => {
-                void handleFetchData();
-            }, 200);
-        },
-        [handleExplore, handleFetchData],
-    );
+                const [nameResult, symbolResult, decimalsResult, totalSupplyResult] =
+                    await Promise.all([
+                        contract.name(),
+                        contract.symbol(),
+                        contract.decimals(),
+                        contract.totalSupply(),
+                    ]);
 
-    const handleKeyDown = useCallback(
-        (e: React.KeyboardEvent) => {
-            if (e.key === 'Enter') {
-                void handleSubmit(e as unknown as React.FormEvent);
+                const name = nameResult.properties.name;
+                const symbol = symbolResult.properties.symbol;
+                const decimals = decimalsResult.properties.decimals;
+                const totalSupply = totalSupplyResult.properties.totalSupply;
+
+                setTokenData({ name, symbol, decimals, totalSupply });
+            } catch (err) {
+                const message = err instanceof Error ? err.message : String(err);
+                setFetchError(`Failed to fetch token: ${message}`);
+            } finally {
+                setIsFetching(false);
             }
         },
-        [handleSubmit],
+        [contractAddress, provider, network, rpcConnected],
     );
 
     return (
         <div className="token-explorer">
             <div className="explorer-search">
                 <h2 className="section-title">Explore Token</h2>
-                <form className="search-form" onSubmit={(e) => void handleSubmit(e)}>
+                <form className="search-form" onSubmit={(e) => void handleExplore(e)}>
                     <input
                         type="text"
                         className="search-input"
                         placeholder="Enter OP20 token contract address (bc1p...)"
                         value={contractAddress}
                         onChange={(e) => setContractAddress(e.target.value)}
-                        onKeyDown={handleKeyDown}
                     />
-                    <button type="submit" className="btn btn-primary" disabled={isFetching}>
+                    <button
+                        type="submit"
+                        className="btn btn-primary"
+                        disabled={isFetching || !rpcConnected}
+                    >
                         {isFetching ? 'Loading...' : 'Explore'}
                     </button>
                 </form>
+                {!rpcConnected && (
+                    <p className="rpc-status">Connecting to OPNet RPC...</p>
+                )}
             </div>
 
             {fetchError && (
@@ -187,22 +151,6 @@ export function TokenExplorer() {
                             </span>
                         </div>
                     </div>
-
-                    {isConnected && userBalance !== null && (
-                        <div className="balance-card">
-                            <span className="balance-label">Your Balance</span>
-                            <span className="balance-value">
-                                {formatTokenAmount(userBalance, tokenData.decimals)}{' '}
-                                <span className="balance-symbol">{tokenData.symbol}</span>
-                            </span>
-                        </div>
-                    )}
-
-                    {!isConnected && (
-                        <div className="info-card">
-                            <p>Connect your OP_WALLET to see your token balance</p>
-                        </div>
-                    )}
                 </div>
             )}
 
@@ -211,8 +159,8 @@ export function TokenExplorer() {
                     <span className="empty-icon">&#x20BF;</span>
                     <h3>Enter a Token Address</h3>
                     <p>
-                        Paste any OP20 token contract address above to view its details, supply, and
-                        your balance.
+                        Paste any OP20 token contract address above to view its details and supply
+                        directly from Bitcoin L1.
                     </p>
                 </div>
             )}

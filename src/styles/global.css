@@ -424,6 +424,13 @@ body {
     line-height: 1.5;
 }
 
+.rpc-status {
+    margin-top: 8px;
+    font-size: 13px;
+    color: var(--text-muted);
+    font-style: italic;
+}
+
 .footer {
     text-align: center;
     padding: 24px;

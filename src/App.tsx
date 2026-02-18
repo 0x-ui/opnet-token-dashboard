@@ -4,8 +4,6 @@ import { TokenExplorer } from './components/TokenExplorer';
 
 /**
  * Main application component.
- * OPNetProvider handles RPC connectivity.
- * WalletConnectProvider is in main.tsx at the root level.
  */
 function App() {
     return (
