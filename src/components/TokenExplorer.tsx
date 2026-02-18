@@ -1,5 +1,6 @@
 import { useState, useCallback, useRef } from 'react';
 import { getContract, IOP20Contract, OP_20_ABI } from 'opnet';
+import { useWalletConnect } from '@btc-vision/walletconnect';
 
 import { useOPNet } from '../providers/OPNetProvider';
 
@@ -32,18 +33,20 @@ function formatTokenAmount(amount: bigint, decimals: number): string {
 
 /**
  * Token Explorer component.
- * Fetches OP20 token data directly from the OPNet RPC provider.
- * No wallet connection required.
+ * Fetches OP20 token data from OPNet RPC and shows user balance when wallet connected.
  */
 export function TokenExplorer() {
     const [contractAddress, setContractAddress] = useState('');
     const [tokenData, setTokenData] = useState<TokenData | null>(null);
     const [activeAddress, setActiveAddress] = useState('');
+    const [userBalance, setUserBalance] = useState<bigint | null>(null);
     const [fetchError, setFetchError] = useState<string | null>(null);
     const [isFetching, setIsFetching] = useState(false);
     const contractRef = useRef<IOP20Contract | null>(null);
 
     const { provider, network, isConnected: rpcConnected } = useOPNet();
+    const { address: walletAddressObj, walletAddress } = useWalletConnect();
+    const walletConnected = walletAddress !== null;
 
     const handleExplore = useCallback(
         async (e: React.FormEvent) => {
@@ -52,17 +55,25 @@ export function TokenExplorer() {
             if (!addr) return;
 
             if (!provider || !rpcConnected) {
-                setFetchError('Not connected to OPNet RPC. Please wait or try a different network.');
+                setFetchError(
+                    'Not connected to OPNet RPC. Please wait or try a different network.',
+                );
                 return;
             }
 
             setFetchError(null);
             setTokenData(null);
+            setUserBalance(null);
             setIsFetching(true);
             setActiveAddress(addr);
 
             try {
-                const contract = getContract<IOP20Contract>(addr, OP_20_ABI, provider, network);
+                const contract = getContract<IOP20Contract>(
+                    addr,
+                    OP_20_ABI,
+                    provider,
+                    network,
+                );
                 contractRef.current = contract;
 
                 const [nameResult, symbolResult, decimalsResult, totalSupplyResult] =
@@ -79,6 +90,15 @@ export function TokenExplorer() {
                 const totalSupply = totalSupplyResult.properties.totalSupply;
 
                 setTokenData({ name, symbol, decimals, totalSupply });
+
+                if (walletConnected && walletAddressObj) {
+                    try {
+                        const balanceResult = await contract.balanceOf(walletAddressObj);
+                        setUserBalance(balanceResult.properties.balance);
+                    } catch {
+                        setUserBalance(null);
+                    }
+                }
             } catch (err) {
                 const message = err instanceof Error ? err.message : String(err);
                 setFetchError(`Failed to fetch token: ${message}`);
@@ -86,7 +106,7 @@ export function TokenExplorer() {
                 setIsFetching(false);
             }
         },
-        [contractAddress, provider, network, rpcConnected],
+        [contractAddress, provider, network, rpcConnected, walletConnected, walletAddressObj],
     );
 
     return (
@@ -151,6 +171,22 @@ export function TokenExplorer() {
                             </span>
                         </div>
                     </div>
+
+                    {walletConnected && userBalance !== null && (
+                        <div className="balance-card">
+                            <span className="balance-label">Your Balance</span>
+                            <span className="balance-value">
+                                {formatTokenAmount(userBalance, tokenData.decimals)}{' '}
+                                <span className="balance-symbol">{tokenData.symbol}</span>
+                            </span>
+                        </div>
+                    )}
+
+                    {!walletConnected && (
+                        <div className="info-card">
+                            <p>Connect your wallet to see your token balance</p>
+                        </div>
+                    )}
                 </div>
             )}
 
@@ -159,8 +195,8 @@ export function TokenExplorer() {
                     <span className="empty-icon">&#x20BF;</span>
                     <h3>Enter a Token Address</h3>
                     <p>
-                        Paste any OP20 token contract address above to view its details and supply
-                        directly from Bitcoin L1.
+                        Paste any OP20 token contract address above to view its details, supply,
+                        and your balance.
                     </p>
                 </div>
             )}

@@ -4,6 +4,7 @@ import { TokenExplorer } from './components/TokenExplorer';
 
 /**
  * Main application component.
+ * WalletConnectProvider wraps everything in main.tsx.
  */
 function App() {
     return (
