@@ -1,0 +1,45 @@
+{
+    "name": "opnet-token-dashboard",
+    "version": "1.0.0",
+    "description": "Bitcoin L1 Token Dashboard - Explore OP20 tokens on OPNet",
+    "type": "module",
+    "scripts": {
+        "dev": "vite",
+        "build": "tsc && vite build",
+        "preview": "vite preview",
+        "lint": "eslint src --ext .ts,.tsx",
+        "format": "prettier --write \"src/**/*.{ts,tsx,css}\"",
+        "format:check": "prettier --check \"src/**/*.{ts,tsx,css}\"",
+        "typecheck": "tsc --noEmit"
+    },
+    "dependencies": {
+        "react": "latest",
+        "react-dom": "latest",
+        "opnet": "1.8.1-beta.13",
+        "@btc-vision/walletconnect": "1.10.0-beta.0",
+        "@btc-vision/bitcoin": "7.0.0-alpha.11",
+        "@btc-vision/transaction": "1.8.0-beta.10",
+        "@btc-vision/bip32": "7.0.2",
+        "@btc-vision/ecpair": "4.0.2",
+        "@noble/hashes": "latest"
+    },
+    "devDependencies": {
+        "@types/react": "latest",
+        "@types/react-dom": "latest",
+        "@types/node": "latest",
+        "@vitejs/plugin-react": "latest",
+        "typescript": "latest",
+        "vite": "latest",
+        "eslint": "latest",
+        "@typescript-eslint/eslint-plugin": "latest",
+        "@typescript-eslint/parser": "latest",
+        "eslint-plugin-react": "latest",
+        "eslint-plugin-react-hooks": "latest",
+        "eslint-plugin-react-refresh": "latest",
+        "eslint-config-prettier": "latest",
+        "prettier": "latest",
+        "vite-plugin-node-polyfills": "latest",
+        "crypto-browserify": "latest",
+        "stream-browserify": "latest"
+    }
+}
