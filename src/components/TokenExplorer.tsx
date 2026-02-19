@@ -110,29 +110,34 @@ export function TokenExplorer() {
     );
 
     return (
-        <div className="token-explorer">
-            <div className="explorer-search">
-                <h2 className="section-title">Explore Token</h2>
-                <form className="search-form" onSubmit={(e) => void handleExplore(e)}>
-                    <input
-                        type="text"
-                        className="search-input"
-                        placeholder="Enter OP20 token contract address (bc1p...)"
-                        value={contractAddress}
-                        onChange={(e) => setContractAddress(e.target.value)}
-                    />
-                    <button
-                        type="submit"
-                        className="btn btn-primary"
-                        disabled={isFetching || !rpcConnected}
-                    >
-                        {isFetching ? 'Loading...' : 'Explore'}
-                    </button>
-                </form>
-                {!rpcConnected && (
-                    <p className="rpc-status">Connecting to OPNet RPC...</p>
-                )}
+        <div className="token-explorer panel">
+            <div className="panel-header">
+                <h2 className="panel-title">
+                    <span className="panel-icon">&#x1F50D;</span>
+                    Token Explorer
+                </h2>
             </div>
+
+            <form className="search-form" onSubmit={(e) => void handleExplore(e)}>
+                <input
+                    type="text"
+                    className="search-input"
+                    placeholder="Enter OP20 token contract address (bc1p...)"
+                    value={contractAddress}
+                    onChange={(e) => setContractAddress(e.target.value)}
+                />
+                <button
+                    type="submit"
+                    className="btn btn-primary"
+                    disabled={isFetching || !rpcConnected}
+                >
+                    {isFetching ? 'Loading...' : 'Explore'}
+                </button>
+            </form>
+
+            {!rpcConnected && (
+                <p className="rpc-status">Connecting to OPNet RPC...</p>
+            )}
 
             {fetchError && (
                 <div className="error-card">
@@ -145,11 +150,16 @@ export function TokenExplorer() {
                     <div className="token-header-card">
                         <div className="token-identity">
                             <span className="token-symbol-badge">{tokenData.symbol}</span>
-                            <h3 className="token-name">{tokenData.name}</h3>
+                            <div>
+                                <h3 className="token-name">{tokenData.name}</h3>
+                                <span className="token-address-mini" title={activeAddress}>
+                                    {activeAddress.slice(0, 14)}...{activeAddress.slice(-6)}
+                                </span>
+                            </div>
                         </div>
                     </div>
 
-                    <div className="stats-grid">
+                    <div className="token-stats-grid">
                         <div className="stat-card">
                             <span className="stat-label">Symbol</span>
                             <span className="stat-value">{tokenData.symbol}</span>
@@ -162,12 +172,6 @@ export function TokenExplorer() {
                             <span className="stat-label">Total Supply</span>
                             <span className="stat-value">
                                 {formatTokenAmount(tokenData.totalSupply, tokenData.decimals)}
-                            </span>
-                        </div>
-                        <div className="stat-card">
-                            <span className="stat-label">Contract</span>
-                            <span className="stat-value stat-address" title={activeAddress}>
-                                {activeAddress.slice(0, 12)}...{activeAddress.slice(-6)}
                             </span>
                         </div>
                     </div>
@@ -195,7 +199,7 @@ export function TokenExplorer() {
                     <span className="empty-icon">&#x20BF;</span>
                     <h3>Enter a Token Address</h3>
                     <p>
-                        Paste any OP20 token contract address above to view its details, supply,
+                        Paste any OP20 token contract address to view its on-chain data, supply,
                         and your balance.
                     </p>
                 </div>
